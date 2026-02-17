@@ -41,7 +41,7 @@ def split_binomial_thinned(
     rng_seed: int | None = None,
     count_scale: float = 4096.0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Split an image into two half-images via deterministic binomial thinning."""
+    """Split an image into two statistically independent Poisson half-images."""
     img = np.asarray(arr)
     if img.ndim != 2:
         raise ValueError(f"Expected 2D array, got shape {img.shape}")
@@ -54,11 +54,10 @@ def split_binomial_thinned(
     rng = np.random.default_rng(0 if rng_seed is None else int(rng_seed))
     mag = np.abs(np.asarray(img, dtype=np.complex128))
     intensity = np.nan_to_num(mag * mag, nan=0.0, posinf=0.0, neginf=0.0)
-    counts = np.rint(intensity * float(count_scale)).astype(np.int64)
-    counts = np.clip(counts, 0, None)
+    lam = np.clip(intensity * float(count_scale), 0.0, None)
 
-    half_counts_a = rng.binomial(counts, 0.5)
-    half_counts_b = counts - half_counts_a
+    half_counts_a = rng.poisson(0.5 * lam)
+    half_counts_b = rng.poisson(0.5 * lam)
     mag_a = np.sqrt(half_counts_a / float(count_scale))
     mag_b = np.sqrt(half_counts_b / float(count_scale))
 
